@@ -1,15 +1,10 @@
 #%%
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 import logging
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
+import csv
 
-#Variaveis da API
-pagina=1
-porPagina=10
-estrategia='new'
 
 def buscar_conteudo_TabNews (pagina: int, porPagina:int, estrategia:str) -> Dict[str, Any]:
     """
@@ -32,16 +27,31 @@ def buscar_conteudo_TabNews (pagina: int, porPagina:int, estrategia:str) -> Dict
 
     try:
         resposta = requests.get(url=urlbase, params=parametros)
-        return resposta.text
+        if str(resposta) == '<Response [200]>':
+            pagina+=1
+            return resposta.text
     except requests.RequestException as erro:
         logging.error(f'Erro ao buscar dados da API do TabNews: {erro}')
-#%%
-def main():    
-    return buscar_conteudo_TabNews(pagina, porPagina, estrategia)
-#%%
 
+#%%
+def ler_csv_variaveis_API () -> Tuple [int, int, str]:
+    caminho_arquivo = r"C:\Repositorio_AzureDevOps\lago_Mago\cod_Lago_Mago\ingestao_Raw\contador.csv"
+    try:
+        with open(caminho_arquivo, 'r', encoding='utf-8') as arquivo:
+            leitor_csv = csv.reader(arquivo)
+            dados=list(leitor_csv)
+            pagina = int(dados[0][0])
+            porPagina = int(dados[0][1])
+            estrategia = str(dados[0][2])
+        return pagina, porPagina, estrategia
+    except FileNotFoundError:
+        print(f"Arquivo não encontrado: {caminho_arquivo}")
+
+#%%
+def main():
+    pagina, porPagina, estrategia = ler_csv_variaveis_API ()    
+    resultado = buscar_conteudo_TabNews(pagina, porPagina, estrategia)
+    print(resultado)
 # %%
 if __name__ == '__main__':
-    resposta = main()
-    print(resposta)
-# %%
+    main()
