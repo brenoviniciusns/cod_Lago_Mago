@@ -1,0 +1,47 @@
+#%%
+import requests
+from typing import Dict, Any
+import logging
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+#Variaveis da API
+pagina=1
+porPagina=10
+estrategia='new'
+
+def buscar_conteudo_TabNews (pagina: int, porPagina:int, estrategia:str) -> Dict[str, Any]:
+    """
+    Busca os conteudos da API do TabNews. 
+    Args:
+        pagina (int): O número da página a ser buscada. Padrão é 1.
+        por_pagina (int): Número de itens por página. Padrão é 10.
+        estrategia (str): Estratégia de conteúdo ('new', 'old', 'relevant'). Padrão é 'new'.
+    Returns:
+        Dict[str, Any]: Resposta JSON da API.
+    Raises:
+        requests.RequestException: Se a requisição à API falhar.
+    """
+    urlbase= 'https://www.tabnews.com.br/api/v1/contents'
+    parametros={
+    'page': pagina,
+    'per_page': porPagina,
+    'stategy': estrategia
+    }
+
+    try:
+        resposta = requests.get(url=urlbase, params=parametros)
+        return resposta.text
+    except requests.RequestException as erro:
+        logging.error(f'Erro ao buscar dados da API do TabNews: {erro}')
+#%%
+def main():    
+    return buscar_conteudo_TabNews(pagina, porPagina, estrategia)
+#%%
+
+# %%
+if __name__ == '__main__':
+    resposta = main()
+    print(resposta)
+# %%
