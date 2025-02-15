@@ -4,8 +4,14 @@ from typing import Dict, Any, Tuple
 import logging
 import pandas as pd
 import csv
+import json
+import os
+from datetime import datetime
 
-
+#%%Variaveis do programa 
+caminho_arquivo = r"C:\Repositorio_AzureDevOps\lago_Mago\cod_Lago_Mago\ingestao_Raw\contador.csv"
+caminho_raw = r"C:\Repositorio_AzureDevOps\lago_Mago\cod_Lago_Mago\ingestao_Raw\raw"
+#%%
 def buscar_conteudo_TabNews (pagina: int, porPagina:int, estrategia:str) -> Dict[str, Any]:
     """
     Busca os conteudos da API do TabNews. 
@@ -18,24 +24,15 @@ def buscar_conteudo_TabNews (pagina: int, porPagina:int, estrategia:str) -> Dict
     Raises:
         requests.RequestException: Se a requisição à API falhar.
     """
-    urlbase= 'https://www.tabnews.com.br/api/v1/contents'
-    parametros={
-    'page': pagina,
-    'per_page': porPagina,
-    'stategy': estrategia
-    }
-
+    urlbase= f'https://www.tabnews.com.br/api/v1/contents?page={pagina}&per_page={porPagina}&strategy={estrategia}'
     try:
-        resposta = requests.get(url=urlbase, params=parametros)
-        if str(resposta) == '<Response [200]>':
-            pagina+=1
-            return resposta.text
+        resposta = requests.get(url=urlbase)
+        return resposta.text
     except requests.RequestException as erro:
         logging.error(f'Erro ao buscar dados da API do TabNews: {erro}')
 
 #%%
 def ler_csv_variaveis_API () -> Tuple [int, int, str]:
-    caminho_arquivo = r"C:\Repositorio_AzureDevOps\lago_Mago\cod_Lago_Mago\ingestao_Raw\contador.csv"
     try:
         with open(caminho_arquivo, 'r', encoding='utf-8') as arquivo:
             leitor_csv = csv.reader(arquivo)
@@ -48,10 +45,37 @@ def ler_csv_variaveis_API () -> Tuple [int, int, str]:
         print(f"Arquivo não encontrado: {caminho_arquivo}")
 
 #%%
+def salvar_json(json_data:str):
+    parsed_json = json.loads(json_data)
+    try:
+        for i in range(len(parsed_json)):
+            objeto_json=parsed_json[i]
+            created_at = datetime.fromisoformat(objeto_json['created_at'].replace('Z', '+00:00'))
+            caminho_pastas=os.path.join(caminho_raw, str(f'Ano_{created_at.year}'), f'Mês_{created_at.month:02d}', f'Dia_{created_at.day:02d}', f'Minuto_{created_at.hour:02d}', f'Segundo_{created_at.minute:02d}')
+            os.makedirs(caminho_pastas, exist_ok=True)
+            nome_arquivo_json=f"{objeto_json['id']}.json"
+            caminho_arquivo_json=os.path.join(caminho_pastas,nome_arquivo_json)
+            with open (caminho_arquivo_json, 'w', encoding='utf-8') as arquivo:
+                json.dump(objeto_json, arquivo, ensure_ascii=False,indent=2)
+    except KeyError as e:
+        print(f'Tivemos um erro para ler a chave no objeto JSON - {e} ')
+    except OSError as e:
+        print(f'Erro ao criar o diretório ou salvar o arquivo - {e}')
+    except Exception as e:
+        print(f'Erro inesperado - {e}')
+#%%
+def adicionar_contador(pagina:int, porPagina:int, estrategia:str):
+    pagina+=1
+    novos_dados=[pagina, porPagina, estrategia]
+    with open (caminho_arquivo, 'w', encoding='utf-8') as arquivo:
+        escritor_csv=csv.writer(arquivo)
+        escritor_csv.writerow(novos_dados)
+#%%
 def main():
-    pagina, porPagina, estrategia = ler_csv_variaveis_API ()    
+    pagina, porPagina, estrategia = ler_csv_variaveis_API ()
     resultado = buscar_conteudo_TabNews(pagina, porPagina, estrategia)
-    print(resultado)
+    salvar_json(str(resultado))
+    adicionar_contador(pagina, porPagina, estrategia)
 # %%
 if __name__ == '__main__':
     main()
